@@ -7,8 +7,6 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $manifestDirectory = (Resolve-Path -LiteralPath $Manifest).Path
-$links = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Links'
-$alias = Join-Path $links 'knitty.exe'
 
 if ($AllowArchiveScanOverride) {
     if (!$Archive) { throw 'The archive scan exception requires the reviewed release ZIP.' }
@@ -54,13 +52,22 @@ try {
     winget @installArguments
     if ($LASTEXITCODE -ne 0) { throw 'WinGet installation failed.' }
     $installed = $true
-    if (!(Test-Path -LiteralPath $alias)) { throw 'WinGet did not create the knitty command alias.' }
 
-    # Exercise the alias, so a launcher that only works from its package directory cannot pass.
-    & (Join-Path $PSScriptRoot 'test_public_windows.ps1') -Bundle $links
+    # WinGet updates the persisted user PATH, which an existing shell has not inherited yet.
+    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+    $env:PATH = "$env:PATH;$userPath"
+    $launcher = Get-Command knitty -CommandType Application -ErrorAction Stop
+    $launcherDirectory = [IO.Path]::GetDirectoryName($launcher.Source)
+    if ($userPath.Split(';') -notcontains $launcherDirectory) {
+        throw 'WinGet did not add the launcher directory to the user PATH.'
+    }
+
+    knitty --help
+    if ($LASTEXITCODE -ne 0) { throw 'The installed knitty command failed through PATH.' }
+    & (Join-Path $PSScriptRoot 'test_public_windows.ps1') -Bundle $launcherDirectory
     if ($LASTEXITCODE -ne 0) { throw 'The installed WinGet command failed its smoke tests.' }
 
-    winget list --id Naliwe.Knitty --exact --accept-source-agreements --disable-interactivity
+    winget list --name Knitty --exact --source winget --accept-source-agreements --disable-interactivity
     if ($LASTEXITCODE -ne 0) { throw 'WinGet did not register the installed package.' }
 } finally {
     if ($overrideEnabled) {
@@ -68,10 +75,14 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Could not disable the temporary local archive exception.' }
     }
     if ($installed) {
-        winget uninstall --id Naliwe.Knitty --exact --silent --accept-source-agreements --disable-interactivity
+        winget uninstall --manifest $manifestDirectory --silent --accept-source-agreements --disable-interactivity
         if ($LASTEXITCODE -ne 0) { throw 'WinGet uninstallation failed.' }
     }
 }
 
-if (Test-Path -LiteralPath $alias) { throw 'WinGet left the command alias after uninstalling.' }
-Write-Host 'WinGet validation, installation, command alias, and uninstallation checks passed.'
+if (Test-Path -LiteralPath $launcher.Source) { throw 'WinGet left the executable after uninstalling.' }
+$remainingUserPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+if ($remainingUserPath.Split(';') -contains $launcherDirectory) {
+    throw 'WinGet left the launcher directory on the user PATH after uninstalling.'
+}
+Write-Host 'WinGet validation, installation, PATH command, and uninstallation checks passed.'

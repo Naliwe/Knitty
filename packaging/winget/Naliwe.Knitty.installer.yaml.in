@@ -3,9 +3,9 @@ PackageIdentifier: Naliwe.Knitty
 PackageVersion: @VERSION@
 InstallerType: zip
 NestedInstallerType: portable
+ArchiveBinariesDependOnPath: true
 NestedInstallerFiles:
   - RelativeFilePath: knitty/knitty.exe
-    PortableCommandAlias: knitty
 ReleaseDate: @DATE@
 Installers:
   - Architecture: x64
