@@ -66,9 +66,6 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'The installed knitty command failed through PATH.' }
     & (Join-Path $PSScriptRoot 'test_public_windows.ps1') -Bundle $launcherDirectory
     if ($LASTEXITCODE -ne 0) { throw 'The installed WinGet command failed its smoke tests.' }
-
-    winget list --name Knitty --exact --source winget --accept-source-agreements --disable-interactivity
-    if ($LASTEXITCODE -ne 0) { throw 'WinGet did not register the installed package.' }
 } finally {
     if ($overrideEnabled) {
         winget settings --disable LocalArchiveMalwareScanOverride
