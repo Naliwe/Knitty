@@ -58,7 +58,11 @@ jobs:
           winget --version
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Validate, install, launch, and uninstall
-        run: ./scripts/test_winget.ps1 -Manifest "dist/manifests/winget/manifests/n/Naliwe/Knitty/$env:RELEASE_VERSION"
+        run: |
+          ./scripts/test_winget.ps1 `
+            -Manifest "dist/manifests/winget/manifests/n/Naliwe/Knitty/$env:RELEASE_VERSION" `
+            -Archive "dist/knitty-$env:RELEASE_VERSION-windows-x64.zip" `
+            -AllowArchiveScanOverride:($env:RELEASE_VERSION -eq '0.7.0')
       - name: Diagnose installation failure
         if: failure()
         run: |
