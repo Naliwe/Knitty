@@ -1,0 +1,84 @@
+name: WinGet package
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/winget.yml'
+      - 'packaging/winget/**'
+      - 'scripts/test_winget.ps1'
+      - 'scripts/test_public_windows.ps1'
+      - 'tooling/src/ReleaseManifests.kt'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Published Knitty version to test
+        required: true
+        default: '0.7.0'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: knitty
+        shell: pwsh
+    env:
+      RELEASE_VERSION: ${{ inputs.version || '0.7.0' }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          path: knitty
+      - uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+          architecture: x64
+      - name: Download published Windows package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "v$env:RELEASE_VERSION" --repo Naliwe/Knitty --pattern "knitty-$env:RELEASE_VERSION-windows-x64.zip" --dir dist
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Generate submission manifests
+        run: |
+          ./kotlin.bat run -m tooling -- manifests --version $env:RELEASE_VERSION --target winget
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Install WinGet
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Install-Module Microsoft.WinGet.Client -RequiredVersion 1.29.380 -Repository PSGallery -Scope CurrentUser -Force
+          Repair-WinGetPackageManager -Version 1.29.380 -Force
+          winget --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Validate, install, launch, and uninstall
+        run: |
+          ./scripts/test_winget.ps1 `
+            -Manifest "dist/manifests/winget/manifests/n/Naliwe/Knitty/$env:RELEASE_VERSION" `
+            -Archive "dist/knitty-$env:RELEASE_VERSION-windows-x64.zip" `
+            -AllowArchiveScanOverride:($env:RELEASE_VERSION -eq '0.7.0')
+      - name: Diagnose installation failure
+        if: failure()
+        run: |
+          $logDirectories = @(
+            "$env:LOCALAPPDATA/Packages/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe/LocalState/DiagOutputDir",
+            "$env:LOCALAPPDATA/Microsoft/WinGet/DiagOutputDir"
+          )
+          foreach ($directory in $logDirectories) {
+            Get-ChildItem -LiteralPath $directory -Filter '*.log' -ErrorAction SilentlyContinue |
+              ForEach-Object { Get-Content -LiteralPath $_.FullName -Tail 100 }
+          }
+          Get-MpComputerStatus -ErrorAction Continue | Select-Object AMServiceEnabled, AntivirusEnabled, AMRunningMode, AntivirusSignatureVersion
+          Get-MpThreat -ErrorAction Continue | Select-Object ThreatName, ThreatID, IsActive, Resources
+          Get-MpThreatDetection -ErrorAction Continue | Select-Object ThreatID, InitialDetectionTime, ActionSuccess, Resources
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: winget-submission
+          path: knitty/dist/manifests/winget
+          if-no-files-found: error
