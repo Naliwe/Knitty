@@ -71,6 +71,14 @@ not publish GitHub releases or submit packages to AUR or WinGet. Keep local
 paths and installed packages. Share allowlisted release artifacts, not the whole
 working directory.
 
+The `WinGet package` workflow validates the generated manifests and installs the
+published Windows ZIP through WinGet on a disposable runner. It smoke-tests the
+installed command alias and uninstalls the package, then uploads the tested
+manifests as `winget-submission`. It runs for relevant packaging PRs (using 0.7.0
+as the baseline release) or manually for a selected published version. The same
+check can be run in an elevated disposable Windows environment with
+`./scripts/test_winget.ps1 -Manifest PATH`; it installs and removes `Naliwe.Knitty`.
+
 Before publishing, review `THIRD-PARTY-NOTICES.md` against the nested libraries in
 the executable JAR and `runtime/release` in the Windows image. Keep upstream
 notices and `runtime/legal/` intact. Check that the linked Lanterna and Java source
