@@ -1,0 +1,24 @@
+product: jvm/app
+
+settings:
+  jvm:
+    jdk:
+      version: 21
+  kotlin:
+    serialization: json
+    allWarningsAsErrors: true
+
+dependencies:
+  - $libs.coroutines.core
+  - $libs.ktor.client.cio
+  - $libs.clikt
+  - $libs.mordant
+  - $libs.lanterna
+  - $libs.slf4j.nop: runtime-only
+  - $libs.snakeyaml
+  - $libs.sshj
+  - $libs.koin.core
+
+test-dependencies:
+  - $libs.ktor.client.mock
+  - $libs.coroutines.test

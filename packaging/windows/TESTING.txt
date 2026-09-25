@@ -1,0 +1,54 @@
+KNITTY - WINDOWS TEST SESSION
+
+This ZIP includes Java 21. No Java, Python, developer tools, or admin install needed.
+Extract All into a folder with spaces, for example Downloads\Knitty test.
+Open the extracted Knitty folder.
+
+1. Double-click Test Knitty.cmd.
+   Expect "Windows bundle smoke tests passed." The test uses a temporary fake
+   game and profile; it does not change your actual game or saved settings.
+   Leave the window open if it fails and share the error text.
+
+2. Open PowerShell in this Knitty folder (type powershell into Explorer's
+   address bar and press Enter). Run these one at a time:
+
+   .\knitty.cmd --help
+   .\knitty.cmd auth
+   .\knitty.cmd search core-keeper storage
+   .\knitty.cmd setup
+   .\knitty.cmd tui core-keeper --profile .\profile
+
+   For auth, use your own API path and API key from https://mod.io/me/access.
+   The key should not appear while you type. Confirm saving it.
+   For setup, choose your Steam library (the folder containing steamapps).
+   In the TUI, search, select a result, view details, and resize the window.
+   Exit without applying changes unless you want to test deployment.
+
+3. Close PowerShell, reopen it in the same folder, then repeat:
+
+   .\knitty.cmd search core-keeper storage
+
+   Expect results without entering credentials again.
+
+4. Optional real deployment: close Core Keeper. Use your existing shared
+   knitty.yaml and knitty.lock, copied together into profile. Keep that profile's
+   identity if you already deployed it previously. Then run:
+
+   .\knitty.cmd sync core-keeper --profile .\profile --dry-run
+   .\knitty.cmd sync core-keeper --profile .\profile
+
+   Review the plan and decline once to check cancellation. Run it again and
+   confirm only the intended changes. After "Profile synchronized", start
+   Core Keeper through Steam and check that the mods load.
+
+Report which step failed, the error text, Windows version, and terminal used.
+Do not send API keys, .env files, or saved credential files.
+
+The new auth command saves local text credentials outside this ZIP in your
+Knitty config directory, normally %USERPROFILE%\.config\knitty\modio.env.
+The older Start Knitty.cmd / Setup Knitty.cmd flow uses a separate encrypted
+credential store and is not the auth flow being tested here.
+
+This session tests the Windows JVM app, CLI, TUI, auth, and deployment. This is
+a script-launched portable bundle; native knitty.exe and WinGet installation,
+upgrade, and uninstall still need their separate release-candidate checks.

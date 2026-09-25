@@ -1,0 +1,28 @@
+[versions]
+coroutines = "1.11.0"
+ktor = "3.6.0"
+clikt = "5.1.0"
+# Keep the Java 21 interactive-terminal fix (mordant#278).
+mordant = "3.1.0"
+lanterna = "3.1.5"
+slf4j = "2.0.20"
+snakeyaml = "3.1.1"
+sshj = "0.41.1"
+commons-compress = "1.28.0"
+pty4j = "0.13.13"
+koin = "4.2.2"
+
+[libraries]
+coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
+ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
+clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
+mordant = { module = "com.github.ajalt.mordant:mordant", version.ref = "mordant" }
+lanterna = { module = "com.googlecode.lanterna:lanterna", version.ref = "lanterna" }
+slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
+snakeyaml = { module = "org.snakeyaml:snakeyaml-engine", version.ref = "snakeyaml" }
+sshj = { module = "com.hierynomus:sshj", version.ref = "sshj" }
+commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
+pty4j = { module = "org.jetbrains.pty4j:pty4j", version.ref = "pty4j" }
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }

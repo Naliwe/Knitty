@@ -1,0 +1,21 @@
+pkgname=knitty-bin
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc='A Kotlin/JVM package manager for game mods'
+arch=('any')
+url='https://github.com/Naliwe/Knitty'
+license=('@LICENSE@' 'Apache-2.0' 'BSD-3-Clause' 'LGPL-3.0-or-later')
+depends=('java-runtime>=21')
+provides=("knitty=$pkgver")
+conflicts=('knitty')
+source=("https://github.com/Naliwe/Knitty/releases/download/v${pkgver}/knitty-${pkgver}-jvm.tar.gz")
+sha256sums=('@SHA256@')
+
+package() {
+    cd "$srcdir/knitty-$pkgver"
+    install -Dm644 knitty.jar "$pkgdir/usr/share/knitty/knitty.jar"
+    install -Dm755 knitty "$pkgdir/usr/bin/knitty"
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    install -Dm644 THIRD-PARTY-NOTICES.md "$pkgdir/usr/share/licenses/$pkgname/THIRD-PARTY-NOTICES.md"
+    install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+}

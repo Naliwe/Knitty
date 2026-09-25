@@ -1,0 +1,18 @@
+product: jvm/app
+
+settings:
+  jvm:
+    jdk:
+      version: 21
+  kotlin:
+    serialization: json
+    allWarningsAsErrors: true
+
+dependencies:
+  - $libs.clikt
+  - $libs.mordant
+  - $libs.commons.compress
+  - $libs.slf4j.nop: runtime-only
+
+test-dependencies:
+  - $libs.pty4j

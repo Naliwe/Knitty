@@ -1,0 +1,39 @@
+pkgname=knitty
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc='A Kotlin/JVM package manager for game mods'
+arch=('any')
+url='https://github.com/Naliwe/Knitty'
+license=('@LICENSE@' 'Apache-2.0' 'BSD-3-Clause' 'LGPL-3.0-or-later')
+depends=('java-runtime>=21')
+makedepends=('jdk21-openjdk' 'curl')
+conflicts=('knitty-bin')
+source=("https://github.com/Naliwe/Knitty/releases/download/v${pkgver}/knitty-${pkgver}-source.tar.gz")
+sha256sums=('@SHA256@')
+
+_kotlin() {
+    # Keep provisioned tools and Maven dependencies inside the build directory.
+    JAVA_HOME=/usr/lib/jvm/java-21-openjdk \
+        KOTLIN_CLI_BOOTSTRAP_CACHE_DIR="$srcdir/.kotlin-bootstrap" \
+        ./kotlin --shared-cache-dir "$srcdir/.kotlin-cache" "$@"
+}
+
+build() {
+    cd "$srcdir/knitty"
+    _kotlin package -m knitty --format executable-jar
+}
+
+check() {
+    cd "$srcdir/knitty"
+    _kotlin test -m knitty
+}
+
+package() {
+    cd "$srcdir/knitty"
+    install -Dm644 build/tasks/_knitty_executableJarJvm/knitty-jvm-executable.jar \
+        "$pkgdir/usr/share/knitty/knitty.jar"
+    install -Dm755 packaging/aur/knitty "$pkgdir/usr/bin/knitty"
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    install -Dm644 THIRD-PARTY-NOTICES.md "$pkgdir/usr/share/licenses/$pkgname/THIRD-PARTY-NOTICES.md"
+    install -Dm644 packaging/README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+}

@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+
+knitty_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+knitty_jar="$knitty_dir/build/tasks/_knitty_executableJarJvm/knitty-jvm-executable.jar"
+if [ ! -f "$knitty_jar" ]; then
+    echo "Build Knitty first: ./kotlin package -m knitty --format executable-jar" >&2
+    exit 1
+fi
+exec java --enable-native-access=ALL-UNNAMED -jar "$knitty_jar" "$@"

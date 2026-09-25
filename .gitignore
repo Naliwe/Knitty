@@ -1,0 +1,13 @@
+/build/
+/dist/
+/scripts/__pycache__/
+/.kotlin/
+.env
+.env.*
+modio.env
+modio.json
+
+.knitty-profile.lock
+.knitty-profile-pending/
+.knitty-profile-stage-*/
+.knitty-write-*

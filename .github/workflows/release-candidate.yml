@@ -1,0 +1,134 @@
+name: Release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Stable version (for example 0.7.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  artifacts:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: jvm
+          - os: windows-latest
+            platform: windows-x64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: knitty
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+      RELEASE_PLATFORM: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          path: knitty
+      - uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+          architecture: x64
+      - name: Test and build (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          ./kotlin test
+          ./kotlin package -m knitty --format executable-jar
+          KNITTY_TEST_JAVA="$JAVA_HOME/bin/java" ./kotlin test -m tooling
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./kotlin.bat package -m knitty --format executable-jar
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./kotlin.bat test
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Assemble release artifact
+        shell: bash
+        run: ./kotlin run -m tooling -- package-release --version "$RELEASE_VERSION" --platform "$RELEASE_PLATFORM"
+      - name: Archive release sources
+        if: runner.os == 'Linux'
+        run: ./kotlin run -m tooling -- package-source --version "$RELEASE_VERSION"
+      - name: Smoke test native Windows command
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Expand-Archive -LiteralPath "dist/knitty-$env:RELEASE_VERSION-windows-x64.zip" -DestinationPath 'build/Windows release with spaces'
+          ./scripts/test_public_windows.ps1 -Bundle 'build/Windows release with spaces/knitty'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: knitty-${{ matrix.platform }}
+          path: knitty/dist/knitty-*
+          if-no-files-found: error
+  manifests:
+    needs: artifacts
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: knitty
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          path: knitty
+      - uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          pattern: knitty-*
+          merge-multiple: true
+          path: knitty/dist
+      - run: ./kotlin run -m tooling -- manifests --version "$RELEASE_VERSION"
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: package-manifests
+          path: knitty/dist/manifests
+  aur-check:
+    needs: [artifacts, manifests]
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: knitty-jvm
+          path: dist
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          name: package-manifests
+          path: build/manifests
+      - name: Install build dependencies
+        run: |
+          pacman -Syu --noconfirm --needed jdk21-openjdk curl
+          useradd --create-home builder
+          cp dist/*-source.tar.gz build/manifests/aur/knitty/
+          cp dist/*-jvm.tar.gz build/manifests/aur/knitty-bin/
+          chown -R builder:builder build
+      - name: Build and smoke test both packages
+        run: |
+          runuser -u builder -- bash -euc '
+            for name in knitty knitty-bin; do
+              cd "$GITHUB_WORKSPACE/build/manifests/aur/$name"
+              makepkg --noconfirm
+              makepkg --printsrcinfo > .SRCINFO
+              java --enable-native-access=ALL-UNNAMED -jar "pkg/$name/usr/share/knitty/knitty.jar" --help
+            done
+          '
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: aur-manifests
+          path: |
+            build/manifests/aur/*/PKGBUILD
+            build/manifests/aur/*/.SRCINFO
+          include-hidden-files: true
+          if-no-files-found: error
