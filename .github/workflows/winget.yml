@@ -59,6 +59,20 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Validate, install, launch, and uninstall
         run: ./scripts/test_winget.ps1 -Manifest "dist/manifests/winget/manifests/n/Naliwe/Knitty/$env:RELEASE_VERSION"
+      - name: Diagnose installation failure
+        if: failure()
+        run: |
+          $logDirectories = @(
+            "$env:LOCALAPPDATA/Packages/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe/LocalState/DiagOutputDir",
+            "$env:LOCALAPPDATA/Microsoft/WinGet/DiagOutputDir"
+          )
+          foreach ($directory in $logDirectories) {
+            Get-ChildItem -LiteralPath $directory -Filter '*.log' -ErrorAction SilentlyContinue |
+              ForEach-Object { Get-Content -LiteralPath $_.FullName -Tail 100 }
+          }
+          Get-MpComputerStatus -ErrorAction Continue | Select-Object AMServiceEnabled, AntivirusEnabled, AMRunningMode, AntivirusSignatureVersion
+          Get-MpThreat -ErrorAction Continue | Select-Object ThreatName, ThreatID, IsActive, Resources
+          Get-MpThreatDetection -ErrorAction Continue | Select-Object ThreatID, InitialDetectionTime, ActionSuccess, Resources
       - uses: actions/upload-artifact@v7.0.1
         with:
           name: winget-submission
